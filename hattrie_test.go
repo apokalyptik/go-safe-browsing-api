@@ -1,13 +1,11 @@
 package safebrowsing
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestNewTrie(t *testing.T) {
 	trie := NewTrie()
 	val := trie.Get("asdf")
-	if val != false {
+	if trie.Get("asdf") {
 		t.Fatal("Unset value returned as true")
 	}
 	trie.Set("asdf")
@@ -28,22 +26,5 @@ func TestDeleteFromTrie(t *testing.T) {
 	val := trie.Get("asdf")
 	if val != false {
 		t.Fatal("Unset value returned as true")
-	}
-}
-
-func TestIterator(t *testing.T) {
-	trie := NewTrie()
-	trie.Set("a")
-	trie.Set("ab")
-	trie.Set("abc")
-	i := trie.Iterator();
-	if key := i.Next(); key != "a" {
-		t.Fatal("iterator failed")
-	}
-	if key := i.Next(); key != "ab" {
-		t.Fatal("iterator failed")
-	}
-	if key := i.Next(); key != "abc" {
-		t.Fatal("iterator failed")
 	}
 }

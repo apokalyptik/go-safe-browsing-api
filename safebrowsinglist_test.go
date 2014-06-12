@@ -108,13 +108,12 @@ func TestLoad(t *testing.T) {
 	ssl.load(chunks)
 
 	// should now be empty
-    i := ssl.FullHashes.Iterator()
-    for key := i.Next(); key != ""; key = i.Next() {
-        if ssl.FullHashes.Get(key) {
-            t.Errorf("Failed to delete full length hash with prefix")
-            return
-        }
-    }
+	found := 0
+	ssl.FullHashes.trie.Iterate(func(key string) { found++ })
+	if found != 0 {
+		t.Errorf("Failed to delete full length hash with prefix")
+		return
+	}
 
 	// remove some of the chunks
 	ssl.DeleteChunks = map[ChunkType]map[ChunkNum]bool{
@@ -124,9 +123,8 @@ func TestLoad(t *testing.T) {
 
 	ssl.load(nil)
 
-	// should have 2 of the entries in there again.
-    i = ssl.FullHashes.Iterator()
-	if ssl.FullHashes.Get(i.Next()) != true || ssl.FullHashes.Get(i.Next()) != true {
+	ssl.FullHashes.trie.Iterate(func(key string) { found++ })
+	if found != 2 {
 		t.Errorf("Hashes were not deleted from LookupMap")
 		return
 	}
