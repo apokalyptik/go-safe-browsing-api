@@ -109,7 +109,7 @@ func TestLoad(t *testing.T) {
 
 	// should now be empty
 	found := 0
-	ssl.FullHashes.trie.Iterate(func(key string) { found++ })
+	ssl.FullHashes.Iterate(func(key string) { found++ })
 	if found != 0 {
 		t.Errorf("Failed to delete full length hash with prefix")
 		return
@@ -123,7 +123,7 @@ func TestLoad(t *testing.T) {
 
 	ssl.load(nil)
 
-	ssl.FullHashes.trie.Iterate(func(key string) { found++ })
+	ssl.FullHashes.Iterate(func(key string) { found++ })
 	if found != 2 {
 		t.Errorf("Hashes were not deleted from LookupMap")
 		return

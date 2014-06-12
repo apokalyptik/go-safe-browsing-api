@@ -32,6 +32,8 @@ import (
 	"io"
 	"os"
 	"sync"
+
+	"github.com/apokalyptik/quicktrie"
 )
 
 // This calculated assuming a size of 500,000 entries
@@ -52,9 +54,9 @@ type SafeBrowsingList struct {
 	// We have the lookup map keyed by host hash, this may mean we have
 	// to do duplicated full has requests for the same hash prefix on
 	// different hosts, but that should be a pretty rare occurance.
-	Lookup            *HatTrie
-	FullHashRequested *HatTrie
-	FullHashes        *HatTrie
+	Lookup            *trie.Trie
+	FullHashRequested *trie.Trie
+	FullHashes        *trie.Trie
 	EntryCount        int
 	Logger            logger
 	updateLock        *sync.RWMutex
@@ -65,9 +67,9 @@ func newSafeBrowsingList(name string, filename string) (ssl *SafeBrowsingList) {
 		Name:              name,
 		FileName:          filename,
 		DataRedirects:     make([]string, 0),
-		Lookup:            NewTrie(),
-		FullHashRequested: NewTrie(),
-		FullHashes:        NewTrie(),
+		Lookup:            trie.NewTrie(),
+		FullHashRequested: trie.NewTrie(),
+		FullHashes:        trie.NewTrie(),
 		DeleteChunks:      make(map[ChunkType]map[ChunkNum]bool),
 		Logger:            &DefaultLogger{},
 		updateLock:        new(sync.RWMutex),
@@ -250,9 +252,9 @@ func (ssl *SafeBrowsingList) updateLookupMap(chunk *Chunk) {
 				case CHUNK_TYPE_ADD:
 					ssl.Logger.Debug("Adding full length hash: %s",
 						hex.EncodeToString([]byte(lookupHash)))
-					ssl.FullHashes.Set(lookupHash)
+					ssl.FullHashes.Add(lookupHash)
 				case CHUNK_TYPE_SUB:
-					ssl.FullHashes.Delete(lookupHash)
+					ssl.FullHashes.Del(lookupHash)
 				}
 
 			} else {
@@ -270,18 +272,18 @@ func (ssl *SafeBrowsingList) updateLookupMap(chunk *Chunk) {
 				lookup := string(hostHash) + string(hash)
 				switch chunk.ChunkType {
 				case CHUNK_TYPE_ADD:
-					ssl.Lookup.Set(lookup)
+					ssl.Lookup.Add(lookup)
 				case CHUNK_TYPE_SUB:
-					ssl.Lookup.Delete(lookup)
+					ssl.Lookup.Del(lookup)
 					var todelete = []string{}
-					ssl.FullHashes.trie.Iterate(func(key string) {
+					ssl.FullHashes.Iterate(func(key string) {
 						keyPrefix := key[0:len(lookup)]
 						if keyPrefix == lookup {
 							todelete = append(todelete, key)
 						}
 					})
 					for _, key := range todelete {
-						ssl.FullHashes.Delete(key)
+						ssl.FullHashes.Del(key)
 					}
 				}
 			}

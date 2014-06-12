@@ -38,6 +38,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apokalyptik/quicktrie"
 )
 
 var SupportedLists map[string]bool = map[string]bool{
@@ -240,7 +242,7 @@ func (ss *SafeBrowsing) reset() {
 	for _, ssl := range ss.Lists {
 		// recreate the bloom filters
 		//ssl.InsertFilter = bloom.New(BLOOM_FILTER_BITS, BLOOM_FILTER_HASHES)
-		ssl.Lookup = NewTrie()
+		ssl.Lookup = trie.NewTrie()
 		// kill off the chunks
 		ssl.ChunkRanges = map[ChunkType]string{
 			CHUNK_TYPE_ADD: "",
@@ -375,69 +377,69 @@ func (ss *SafeBrowsing) queryUrl(url string, matchFullHash bool) (list string, f
 	hostKey := ExtractHostKey(url)
 	hostKeyHash := HostHash(getHash(hostKey)[:4])
 	ss.Logger.Debug("Host hash: %s", hex.EncodeToString([]byte(hostKeyHash)))
-    urls, err := GenerateTestCandidates(url)
-    if err != nil {
-        return "", false, nil
-    }
-    ss.Logger.Debug("Checking %d iterations of url", len(urls))
-    for _, url := range urls {
-        for list, ssl := range ss.Lists {
+	urls, err := GenerateTestCandidates(url)
+	if err != nil {
+		return "", false, nil
+	}
+	ss.Logger.Debug("Checking %d iterations of url", len(urls))
+	for _, url := range urls {
+		for list, ssl := range ss.Lists {
 			ssl.updateLock.RLock()
 			// hash it up
 			ss.Logger.Debug("Hashing %s", url)
 			urlHash := getHash(url)
 
-            prefix := urlHash[0:ssl.HashPrefixLen]
-            lookupHash := LookupHash(string(hostKeyHash) + string(prefix))
-            fullLookupHash := LookupHash(string(hostKeyHash) + string(urlHash))
+			prefix := urlHash[0:ssl.HashPrefixLen]
+			lookupHash := LookupHash(string(hostKeyHash) + string(prefix))
+			fullLookupHash := LookupHash(string(hostKeyHash) + string(urlHash))
 
-            ss.Logger.Debug("testing hash: %s + %s = %s, full = %s",
-                hex.EncodeToString([]byte(hostKeyHash)),
-                hex.EncodeToString([]byte(prefix)),
-                hex.EncodeToString([]byte(lookupHash)),
-                hex.EncodeToString([]byte(fullLookupHash)))
+			ss.Logger.Debug("testing hash: %s + %s = %s, full = %s",
+				hex.EncodeToString([]byte(hostKeyHash)),
+				hex.EncodeToString([]byte(prefix)),
+				hex.EncodeToString([]byte(lookupHash)),
+				hex.EncodeToString([]byte(fullLookupHash)))
 
-            // look up full hash matches
-            if ssl.FullHashes.Get(string(fullLookupHash)) {
+			// look up full hash matches
+			if ssl.FullHashes.Get(string(fullLookupHash)) {
 				ssl.updateLock.RUnlock()
 				return list, true, nil
-            }
+			}
 
-            // now see if there is a match in our prefix trie
-            keysToLookupMap := make(map[LookupHash]bool)
-            if ssl.Lookup.Get(string(lookupHash)) {
-                if !matchFullHash || OfflineMode {
-                    ss.Logger.Debug("Partial hash hit")
+			// now see if there is a match in our prefix trie
+			keysToLookupMap := make(map[LookupHash]bool)
+			if ssl.Lookup.Get(string(lookupHash)) {
+				if !matchFullHash || OfflineMode {
+					ss.Logger.Debug("Partial hash hit")
 					ssl.updateLock.RUnlock()
-                    return list, false, nil
-                }
-                // have we have already asked for full hashes for this prefix?
-                if ssl.FullHashRequested.Get(string(lookupHash)) {
-                    ss.Logger.Debug("Full length hash miss")
+					return list, false, nil
+				}
+				// have we have already asked for full hashes for this prefix?
+				if ssl.FullHashRequested.Get(string(lookupHash)) {
+					ss.Logger.Debug("Full length hash miss")
 					ssl.updateLock.RUnlock()
-                    return "", false, nil
-                }
+					return "", false, nil
+				}
 
-                // we matched a prefix and need to request a full hash
-                ss.Logger.Debug("Need to request full length hashes for %s",
-                    hex.EncodeToString([]byte(prefix)))
+				// we matched a prefix and need to request a full hash
+				ss.Logger.Debug("Need to request full length hashes for %s",
+					hex.EncodeToString([]byte(prefix)))
 
-                keysToLookupMap[prefix] = true
-            }
-            if len(keysToLookupMap) > 0 {
+				keysToLookupMap[prefix] = true
+			}
+			if len(keysToLookupMap) > 0 {
 				ssl.updateLock.RUnlock()
-                err := ss.requestFullHashes(list, hostKeyHash, keysToLookupMap)
-                if err != nil {
-                    return "", false, nil
-                }
+				err := ss.requestFullHashes(list, hostKeyHash, keysToLookupMap)
+				if err != nil {
+					return "", false, nil
+				}
 				ssl.updateLock.RLock()
 
-                // re-check for full hash hit.
-                if ssl.FullHashes.Get(string(fullLookupHash)) {
+				// re-check for full hash hit.
+				if ssl.FullHashes.Get(string(fullLookupHash)) {
 					ssl.updateLock.RUnlock()
 					return list, true, nil
-                }
-            }
+				}
+			}
 
 			ssl.updateLock.RUnlock()
 		}
@@ -458,9 +460,9 @@ func (ss *SafeBrowsing) requestFullHashes(list string, host HostHash, prefixes m
 		if err != nil {
 			return err
 		}
-        if firstPrefixLen == 0 {
-            firstPrefixLen = len(prefix)
-        }
+		if firstPrefixLen == 0 {
+			firstPrefixLen = len(prefix)
+		}
 		if firstPrefixLen != len(prefix) {
 			return fmt.Errorf("Attempted to used variable length hashes in lookup!")
 		}
@@ -483,7 +485,7 @@ func (ss *SafeBrowsing) requestFullHashes(list string, host HostHash, prefixes m
 	}
 	// mark these prefxes as having been requested
 	for prefix, _ := range prefixes {
-		ss.Lists[list].FullHashRequested.Set(string(host)+string(prefix))
+		ss.Lists[list].FullHashRequested.Add(string(host) + string(prefix))
 	}
 	return ss.processFullHashes(list, response.Body, host)
 }
