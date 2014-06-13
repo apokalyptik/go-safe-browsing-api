@@ -60,7 +60,7 @@ func TestLoad(t *testing.T) {
 		},
 	}
 	ssl.load([]*Chunk{chunk})
-	if !ssl.Lookup.Get("testtest") {
+	if !ssl.Lookup.GetString("testtest") {
 		t.Errorf("Hashes were not added to LookupMap")
 		return
 	}
@@ -76,7 +76,7 @@ func TestLoad(t *testing.T) {
 		},
 	}
 	ssl.load([]*Chunk{chunk})
-	if ssl.Lookup.Get("testtest") {
+	if ssl.Lookup.GetString("testtest") {
 		t.Errorf("Hashes were not deleted from LookupMap")
 		return
 	}
@@ -109,9 +109,9 @@ func TestLoad(t *testing.T) {
 
 	// should now be empty
 	found := 0
-	ssl.FullHashes.Iterate(func(key string) { found++ })
+	ssl.FullHashes.IterateString(func(key string) { found++ })
 	if found != 0 {
-		t.Errorf("Failed to delete full length hash with prefix")
+		t.Errorf("Failed to delete full length hash with prefix found: %d", found)
 		return
 	}
 
@@ -123,7 +123,7 @@ func TestLoad(t *testing.T) {
 
 	ssl.load(nil)
 
-	ssl.FullHashes.Iterate(func(key string) { found++ })
+	ssl.FullHashes.IterateString(func(key string) { found++ })
 	if found != 2 {
 		t.Errorf("Hashes were not deleted from LookupMap")
 		return

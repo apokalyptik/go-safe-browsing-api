@@ -400,21 +400,21 @@ func (ss *SafeBrowsing) queryUrl(url string, matchFullHash bool) (list string, f
 				hex.EncodeToString([]byte(fullLookupHash)))
 
 			// look up full hash matches
-			if ssl.FullHashes.Get(string(fullLookupHash)) {
+			if ssl.FullHashes.Get([]byte(fullLookupHash)) {
 				ssl.updateLock.RUnlock()
 				return list, true, nil
 			}
 
 			// now see if there is a match in our prefix trie
 			keysToLookupMap := make(map[LookupHash]bool)
-			if ssl.Lookup.Get(string(lookupHash)) {
+			if ssl.Lookup.Get([]byte(lookupHash)) {
 				if !matchFullHash || OfflineMode {
 					ss.Logger.Debug("Partial hash hit")
 					ssl.updateLock.RUnlock()
 					return list, false, nil
 				}
 				// have we have already asked for full hashes for this prefix?
-				if ssl.FullHashRequested.Get(string(lookupHash)) {
+				if ssl.FullHashRequested.Get([]byte(lookupHash)) {
 					ss.Logger.Debug("Full length hash miss")
 					ssl.updateLock.RUnlock()
 					return "", false, nil
@@ -435,7 +435,7 @@ func (ss *SafeBrowsing) queryUrl(url string, matchFullHash bool) (list string, f
 				ssl.updateLock.RLock()
 
 				// re-check for full hash hit.
-				if ssl.FullHashes.Get(string(fullLookupHash)) {
+				if ssl.FullHashes.Get([]byte(fullLookupHash)) {
 					ssl.updateLock.RUnlock()
 					return list, true, nil
 				}
@@ -485,7 +485,7 @@ func (ss *SafeBrowsing) requestFullHashes(list string, host HostHash, prefixes m
 	}
 	// mark these prefxes as having been requested
 	for prefix, _ := range prefixes {
-		ss.Lists[list].FullHashRequested.Add(string(host) + string(prefix))
+		ss.Lists[list].FullHashRequested.AddString(string(host) + string(prefix))
 	}
 	return ss.processFullHashes(list, response.Body, host)
 }

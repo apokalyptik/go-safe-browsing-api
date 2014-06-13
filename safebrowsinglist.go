@@ -252,9 +252,9 @@ func (ssl *SafeBrowsingList) updateLookupMap(chunk *Chunk) {
 				case CHUNK_TYPE_ADD:
 					ssl.Logger.Debug("Adding full length hash: %s",
 						hex.EncodeToString([]byte(lookupHash)))
-					ssl.FullHashes.Add(lookupHash)
+					ssl.FullHashes.AddString(lookupHash)
 				case CHUNK_TYPE_SUB:
-					ssl.FullHashes.Del(lookupHash)
+					ssl.FullHashes.DelString(lookupHash)
 				}
 
 			} else {
@@ -272,19 +272,22 @@ func (ssl *SafeBrowsingList) updateLookupMap(chunk *Chunk) {
 				lookup := string(hostHash) + string(hash)
 				switch chunk.ChunkType {
 				case CHUNK_TYPE_ADD:
-					ssl.Lookup.Add(lookup)
+					ssl.Lookup.AddString(lookup)
 				case CHUNK_TYPE_SUB:
-					ssl.Lookup.Del(lookup)
-					var todelete = []string{}
-					ssl.FullHashes.Iterate(func(key string) {
-						keyPrefix := key[0:len(lookup)]
-						if keyPrefix == lookup {
-							todelete = append(todelete, key)
+					ssl.Lookup.DelString(lookup)
+					ssl.FullHashes.DropString(lookup)
+					/*
+						var todelete = []string{}
+						ssl.FullHashes.IterateString(func(key string) {
+							keyPrefix := key[0:len(lookup)]
+							if keyPrefix == lookup {
+								todelete = append(todelete, key)
+							}
+						})
+						for _, key := range todelete {
+							ssl.FullHashes.DelString(key)
 						}
-					})
-					for _, key := range todelete {
-						ssl.FullHashes.Del(key)
-					}
+					*/
 				}
 			}
 		}

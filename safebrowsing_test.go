@@ -188,7 +188,7 @@ func TestUrlListed(t *testing.T) {
 		Logger:  new(DefaultLogger),
 		request: NewMockRequest(string(chunkData)),
 	}
-	ss.Lists["googpub-phish-shavar"].Lookup.Add(string(hostHash) + string(hostHash))
+	ss.Lists["googpub-phish-shavar"].Lookup.AddString(string(hostHash) + string(hostHash))
 
 	url := "http://test.com/"
 	result, _, err := ss.MightBeListed(url)
