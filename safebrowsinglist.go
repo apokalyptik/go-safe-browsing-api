@@ -276,18 +276,6 @@ func (ssl *SafeBrowsingList) updateLookupMap(chunk *Chunk) {
 				case CHUNK_TYPE_SUB:
 					ssl.Lookup.DelString(lookup)
 					ssl.FullHashes.DropString(lookup)
-					/*
-						var todelete = []string{}
-						ssl.FullHashes.IterateString(func(key string) {
-							keyPrefix := key[0:len(lookup)]
-							if keyPrefix == lookup {
-								todelete = append(todelete, key)
-							}
-						})
-						for _, key := range todelete {
-							ssl.FullHashes.DelString(key)
-						}
-					*/
 				}
 			}
 		}
