@@ -485,7 +485,7 @@ func (ss *SafeBrowsing) requestFullHashes(list string, host HostHash, prefixes m
 	}
 	// mark these prefxes as having been requested
 	for prefix, _ := range prefixes {
-		ss.Lists[list].FullHashRequested.AddString(string(host) + string(prefix))
+		ss.Lists[list].FullHashRequested.Add(string(host) + string(prefix))
 	}
 	return ss.processFullHashes(list, response.Body, host)
 }
