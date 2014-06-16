@@ -373,10 +373,6 @@ func (ss *SafeBrowsing) queryUrl(url string, matchFullHash bool) (list string, f
 		return "", false, nil
 	}
 
-	// now see if there is a host hit
-	hostKey := ExtractHostKey(url)
-	hostKeyHash := HostHash(getHash(hostKey)[:4])
-	ss.Logger.Debug("Host hash: %s", hex.EncodeToString([]byte(hostKeyHash)))
 	urls, err := GenerateTestCandidates(url)
 	if err != nil {
 		return "", false, nil
@@ -384,6 +380,9 @@ func (ss *SafeBrowsing) queryUrl(url string, matchFullHash bool) (list string, f
 	ss.Logger.Debug("Checking %d iterations of url", len(urls))
 	for _, url := range urls {
 		for list, ssl := range ss.Lists {
+			hostKey := ExtractHostKey(url)
+			hostKeyHash := HostHash(getHash(hostKey)[:4])
+			ss.Logger.Debug("Host hash: %s", hex.EncodeToString([]byte(hostKeyHash)))
 			ssl.updateLock.RLock()
 			// hash it up
 			ss.Logger.Debug("Hashing %s", url)
